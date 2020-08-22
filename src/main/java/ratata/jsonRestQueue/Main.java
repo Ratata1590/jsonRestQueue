@@ -6,7 +6,9 @@ import java.util.concurrent.ArrayBlockingQueue;
 
 import org.rapidoid.annotation.Controller;
 import org.rapidoid.annotation.GET;
+import org.rapidoid.annotation.Header;
 import org.rapidoid.annotation.POST;
+import org.rapidoid.annotation.PUT;
 import org.rapidoid.http.Req;
 import org.rapidoid.setup.App;
 import org.rapidoid.setup.Setup;
@@ -21,10 +23,11 @@ public class Main {
 	private static String host;
 	private static int port;
 	private static int queueSize = 100;
+	private static boolean stop = false;
 	private static final Map<String, ArrayBlockingQueue<JsonNode>> restQueue = new HashMap<String, ArrayBlockingQueue<JsonNode>>();
 
 	@GET("/*")
-	public Object hey(Req req) {
+	public Object download(Req req) {
 		try {
 			return restQueue.get(req.uri()).poll();
 		} catch (Exception e) {
@@ -35,21 +38,45 @@ public class Main {
 	}
 
 	@POST("/*")
-	public void size(Req req) {
+	public void upload(Req req, @Header(value = "clear_queue") Boolean clear_queue) {
 		try {
+			if (stop) {
+				throw new Exception("stoping");
+			}
 			ArrayBlockingQueue<JsonNode> queue;
 			JsonNode data = mapper.readTree(req.body());
 			if (!restQueue.containsKey(req.uri())) {
 				queue = new ArrayBlockingQueue<JsonNode>(queueSize);
 				queue.add(data);
 				restQueue.put(req.uri(), queue);
-			} else {
-				restQueue.get(req.uri()).add(data);
+				return;
 			}
+			if (clear_queue) {
+				restQueue.get(req.uri()).clear();
+			}
+			restQueue.get(req.uri()).add(data);
 		} catch (Exception e) {
 			req.response().code(500);
+		} finally {
+			req.response().body("".getBytes());
 		}
-		req.response().body("".getBytes());
+	}
+
+	@PUT("/quit")
+	public void quit() throws InterruptedException {
+		stop = true;
+		for (String key : restQueue.keySet()) {
+			ArrayBlockingQueue<JsonNode> queue = restQueue.get(key);
+			while (!queue.isEmpty()) {
+				Thread.sleep(1000);
+			}
+		}
+		System.exit(0);
+	}
+
+	@PUT("/quit_force")
+	public void quit_force(Req req) {
+		System.exit(0);
 	}
 
 	public static void main(String[] args) {
