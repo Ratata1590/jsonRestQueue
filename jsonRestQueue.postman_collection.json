@@ -1,0 +1,97 @@
+{
+	"variables": [],
+	"info": {
+		"name": "jsonRestQueue",
+		"_postman_id": "cd9432bc-7251-2853-ae18-8b7531f20e94",
+		"description": "",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "post",
+			"request": {
+				"url": "localhost:9090/example",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					},
+					{
+						"key": "blocking",
+						"value": "true",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"hello\":\"world\"}"
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "get",
+			"request": {
+				"url": "localhost:9090/example",
+				"method": "GET",
+				"header": [
+					{
+						"key": "blocking",
+						"value": "true",
+						"description": ""
+					}
+				],
+				"body": {},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "quit",
+			"request": {
+				"url": "localhost:9090/quit",
+				"method": "PUT",
+				"header": [],
+				"body": {},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "quit_force",
+			"request": {
+				"url": "localhost:9090/quit_force",
+				"method": "PUT",
+				"header": [],
+				"body": {},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "info",
+			"request": {
+				"url": "localhost:9090/info",
+				"method": "PUT",
+				"header": [],
+				"body": {},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "delete",
+			"request": {
+				"url": "localhost:9090/example",
+				"method": "DELETE",
+				"header": [],
+				"body": {},
+				"description": ""
+			},
+			"response": []
+		}
+	]
+}
