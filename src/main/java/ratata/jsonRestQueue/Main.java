@@ -6,12 +6,14 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.PrintWriter;
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 
 import org.rapidoid.annotation.Controller;
 import org.rapidoid.annotation.DELETE;
 import org.rapidoid.annotation.GET;
+import org.rapidoid.annotation.Header;
 import org.rapidoid.annotation.POST;
 import org.rapidoid.annotation.PUT;
 import org.rapidoid.http.Req;
@@ -30,13 +32,16 @@ public class Main {
 	private static int port;
 	private static int queueSize = 100;
 	private static boolean stop = false;
-	private static Map<String, ArrayBlockingQueue<JsonNode>> restQueue = new HashMap<String, ArrayBlockingQueue<JsonNode>>();
+	private static Hashtable<String, ArrayBlockingQueue<JsonNode>> restQueue = new Hashtable<String, ArrayBlockingQueue<JsonNode>>();
 
 	@GET("/*")
-	public Object download(Req req) {
+	public Object download(Req req, @Header("blocking") Boolean blocking) {
 		try {
 			if (stop) {
 				throw new Exception("stoping");
+			}
+			if (Boolean.TRUE.equals(blocking)) {
+				return restQueue.get(req.uri()).take();
 			}
 			return restQueue.get(req.uri()).poll();
 		} catch (Exception e) {
@@ -47,7 +52,7 @@ public class Main {
 	}
 
 	@POST("/*")
-	public void upload(Req req) {
+	public void upload(Req req, @Header("blocking") Boolean blocking) {
 		try {
 			if (stop) {
 				throw new Exception("stoping");
@@ -56,8 +61,10 @@ public class Main {
 			JsonNode data = mapper.readTree(req.body());
 			if (!restQueue.containsKey(req.uri())) {
 				queue = new ArrayBlockingQueue<JsonNode>(queueSize);
-				queue.add(data);
 				restQueue.put(req.uri(), queue);
+			}
+			if (Boolean.TRUE.equals(blocking)) {
+				restQueue.get(req.uri()).put(data);
 				return;
 			}
 			restQueue.get(req.uri()).add(data);
