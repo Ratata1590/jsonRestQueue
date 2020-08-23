@@ -54,18 +54,13 @@
 			"request": {
 				"url": "localhost:9090/quit",
 				"method": "PUT",
-				"header": [],
-				"body": {},
-				"description": ""
-			},
-			"response": []
-		},
-		{
-			"name": "quit_force",
-			"request": {
-				"url": "localhost:9090/quit_force",
-				"method": "PUT",
-				"header": [],
+				"header": [
+					{
+						"key": "force",
+						"value": "false",
+						"description": ""
+					}
+				],
 				"body": {},
 				"description": ""
 			},

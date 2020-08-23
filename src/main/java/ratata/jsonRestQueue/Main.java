@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Controller
 public class Main {
 
+	private static final String extension = ".ratata_queue";
 	private static ObjectMapper mapper = new ObjectMapper();
 	private static String queueName = "RestQueue";
 	private static String host;
@@ -57,11 +58,9 @@ public class Main {
 			if (stop) {
 				throw new Exception("stoping");
 			}
-			ArrayBlockingQueue<JsonNode> queue;
 			JsonNode data = mapper.readTree(req.body());
 			if (!restQueue.containsKey(req.uri())) {
-				queue = new ArrayBlockingQueue<JsonNode>(queueSize);
-				restQueue.put(req.uri(), queue);
+				restQueue.put(req.uri(), new ArrayBlockingQueue<JsonNode>(queueSize));
 			}
 			if (Boolean.TRUE.equals(blocking)) {
 				restQueue.get(req.uri()).put(data);
@@ -89,29 +88,41 @@ public class Main {
 	}
 
 	@PUT("/info")
-	public Map<String, String> getInfo(Req req) {
+	public Map<String, Object> getInfo(Req req) {
+		Map<String, Object> result = new HashMap<String, Object>();
 		Map<String, String> info = new HashMap<String, String>();
 		for (String key : restQueue.keySet()) {
 			ArrayBlockingQueue<JsonNode> queue = restQueue.get(key);
 			info.put(key, String.valueOf(queue.size()).concat("/").concat(String.valueOf(queueSize)));
 		}
-		return info;
+		result.put("queueName", queueName);
+		result.put("queueSize", queueSize);
+		result.put("host", host);
+		result.put("port", port);
+		result.put("stop", stop);
+		result.put("info", info);
+		return result;
 	}
 
 	@PUT("/quit")
-	public void quit() throws Exception {
-		stop = true;
-		saveQueue();
-		System.exit(0);
-	}
-
-	@PUT("/quit_force")
-	public void quit_force(Req req) {
-		System.exit(0);
+	public void quit(@Header("force") Boolean force) {
+		try {
+			if (stop) {
+				throw new Exception("stoping");
+			}
+			stop = true;
+			if (Boolean.TRUE.equals(force)) {
+				System.exit(0);
+				return;
+			}
+			saveQueue();
+			System.exit(0);
+		} catch (Exception e) {
+		}
 	}
 
 	public static void saveQueue() throws Exception {
-		FileOutputStream fos = new FileOutputStream(queueName);
+		FileOutputStream fos = new FileOutputStream(queueName.concat(extension));
 		PrintWriter writer = new PrintWriter(fos);
 		writer.println(queueSize);
 		for (String key : restQueue.keySet()) {
@@ -124,11 +135,12 @@ public class Main {
 		}
 		writer.flush();
 		fos.flush();
+		writer.close();
 		fos.close();
 	}
 
 	public static void loadQueue() throws Exception {
-		BufferedReader reader = new BufferedReader(new FileReader(queueName));
+		BufferedReader reader = new BufferedReader(new FileReader(queueName.concat(extension)));
 		String key = null;
 		String line = reader.readLine();
 		queueSize = Integer.valueOf(line).intValue();
@@ -154,11 +166,13 @@ public class Main {
 			host = args[1];
 			port = Integer.valueOf(args[2]).intValue();
 			queueSize = Integer.valueOf(args[3]).intValue();
-			Setup.create(queueName).address(host).port(port).scan();
+
 		} else {
-			Setup.create(queueName).address("0.0.0.0").port(9090).scan();
+			host = "0.0.0.0";
+			port = 9090;
 		}
-		if ((new File(queueName)).exists()) {
+		Setup.create(queueName).address(host).port(port).scan();
+		if ((new File(queueName.concat(extension))).exists()) {
 			loadQueue();
 		}
 	}
