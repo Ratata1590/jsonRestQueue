@@ -5,8 +5,8 @@ import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 
 import org.rapidoid.annotation.Controller;
+import org.rapidoid.annotation.DELETE;
 import org.rapidoid.annotation.GET;
-import org.rapidoid.annotation.Header;
 import org.rapidoid.annotation.POST;
 import org.rapidoid.annotation.PUT;
 import org.rapidoid.http.Req;
@@ -38,7 +38,7 @@ public class Main {
 	}
 
 	@POST("/*")
-	public void upload(Req req, @Header(value = "clear_queue") Boolean clear_queue) {
+	public void upload(Req req) {
 		try {
 			if (stop) {
 				throw new Exception("stoping");
@@ -51,15 +51,35 @@ public class Main {
 				restQueue.put(req.uri(), queue);
 				return;
 			}
-			if (clear_queue) {
-				restQueue.get(req.uri()).clear();
-			}
 			restQueue.get(req.uri()).add(data);
 		} catch (Exception e) {
 			req.response().code(500);
 		} finally {
 			req.response().body("".getBytes());
 		}
+	}
+
+	@DELETE("/*")
+	public void delete(Req req) {
+		try {
+			ArrayBlockingQueue<JsonNode> queue = restQueue.get(req.uri());
+			restQueue.remove(req.uri());
+			queue.clear();
+		} catch (Exception e) {
+			req.response().code(500);
+		} finally {
+			req.response().body("".getBytes());
+		}
+	}
+
+	@PUT("/info")
+	public Map<String, String> getInfo(Req req) {
+		Map<String, String> info = new HashMap<String, String>();
+		for (String key : restQueue.keySet()) {
+			ArrayBlockingQueue<JsonNode> queue = restQueue.get(key);
+			info.put(key, String.valueOf(queue.size()).concat("/").concat(String.valueOf(queueSize)));
+		}
+		return info;
 	}
 
 	@PUT("/quit")
